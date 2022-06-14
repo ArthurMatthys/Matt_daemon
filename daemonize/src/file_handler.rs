@@ -32,29 +32,39 @@ impl Stdio {
     }
 }
 
-pub(crate) fn redirect_stream(stdin: Stdio, stdout: Stdio, stderr: Stdio) -> Result<()> {
+pub(crate) fn redirect_stream() -> Result<()> {
     unsafe {
+        get_err(libc::close(libc::STDIN_FILENO), Error::CloseFd)?;
         let null_fd = get_err(
             libc::open(b"/dev/null\0" as *const [u8; 10] as _, libc::O_RDWR),
             Error::Open,
         )?;
-        eprintln!("null fd: {null_fd}");
-        let redirect = |fd, std: Stdio| -> Result<()> {
-            match std.inner {
-                StdioImpl::Redirect(file) => {
-                    let raw_fd = file.as_raw_fd();
-                    get_err(libc::dup2(raw_fd, fd), Error::RedirectStream)?;
-                }
-                StdioImpl::DevNull => {
-                    get_err(libc::dup2(null_fd, fd), Error::RedirectStream)?;
-                }
-            };
-            Ok(())
-        };
-        redirect(libc::STDIN_FILENO, stdin)?;
-        redirect(libc::STDOUT_FILENO, stdout)?;
-        redirect(libc::STDERR_FILENO, stderr)?;
-        get_err(libc::close(null_fd), Error::CloseFd)?;
+        if null_fd != 0 {
+            return Err(Error::InvalidFd {
+                fd: null_fd,
+                expected: libc::STDIN_FILENO,
+            });
+        }
+        let out_fd = get_err(
+            libc::dup2(libc::STDIN_FILENO, libc::STDOUT_FILENO),
+            Error::RedirectStream,
+        )?;
+        if out_fd != libc::STDOUT_FILENO {
+            return Err(Error::InvalidFd {
+                fd: out_fd,
+                expected: libc::STDOUT_FILENO,
+            });
+        }
+        let err_fd = get_err(
+            libc::dup2(libc::STDIN_FILENO, libc::STDERR_FILENO),
+            Error::RedirectStream,
+        )?;
+        if err_fd != libc::STDERR_FILENO {
+            return Err(Error::InvalidFd {
+                fd: err_fd,
+                expected: libc::STDERR_FILENO,
+            });
+        }
     }
     Ok(())
 }
@@ -71,50 +81,52 @@ fn get_rlimit() -> Result<i32> {
     }
 }
 
+fn get_max_fd() -> Result<i32> {
+    unsafe {
+        let ret = get_err(libc::sysconf(libc::_SC_OPEN_MAX), Error::Sysconf);
+        if let Ok(max_fd) = ret {
+            return max_fd.try_into().map_err(|_| Error::MaxFdTooBig);
+        }
+    }
+
+    get_rlimit()
+}
+
 pub(crate) unsafe fn close_fds() -> Result<()> {
-    // eprintln!("gogogogo");
-    // std::thread::sleep(std::time::Duration::from_secs(10));
-    // let path = PathBuf::from("/proc/self/fd/");
-    // eprintln!("gogogogo");
-    // std::thread::sleep(std::time::Duration::from_secs(10));
-    // let dir = fs::read_dir(path);
-    // eprintln!("gogogogo");
-    // std::thread::sleep(std::time::Duration::from_secs(10));
-    let path = PathBuf::from("/proc/self/fd/");
-    let dir = fs::read_dir(path);
-    let fds: Vec<i32> = match dir {
-        Ok(entries) => {
-            entries
-                .filter_map(|entry| {
-                    entry
-                        .ok()
-                        .map(|entry| {
-                            // eprintln!("entry : {entry:#?}");
-                            entry
-                                .file_name()
-                                .into_string()
-                                .map(|filename| filename.parse::<i32>().ok())
-                                .ok()
-                        })
-                        .flatten()
-                        .flatten()
-                })
-                .filter(|fd| ![0, 1, 2].contains(fd))
-                .collect()
-        }
-        Err(e) => {
-            eprintln!("error reading fd dir : {e}");
-            (3..get_rlimit()?).collect()
-        }
-    };
+    let fds = 3..get_max_fd()?;
+    get_rlimit()?;
     eprintln!("fd to close : {fds:#?}");
 
-    for fd in fds.iter() {
-        if *fd == 4 {
-            continue;
-        }
-        eprintln!("closing fd : {fd}");
-        get_err(libc::close(*fd), Error::CloseFd)?;
+    fds.for_each(|fd| {
+        libc::close(fd);
+    });
+    Ok(())
+}
+
+pub(crate) fn lock(file: String) -> Result<()> {
+    unsafe {
+        let fd = libc::open((file + "\0").as_ptr() as _, libc::O_RDONLY | libc::O_CREAT);
+
+        eprintln!("fd : {fd}");
+
+        get_err(libc::flock(fd, libc::LOCK_EX), Error::AlreadyLock).map_err(|e| match e {
+            Error::AlreadyLock(libc::EWOULDBLOCK) => {
+                eprintln!("Je devrais arriver ici");
+                e
+            }
+            Error::AlreadyLock(v) => Error::IssueLockFile(v),
+            _ => unreachable!(),
+        })?;
+    }
+    Ok(())
+}
+pub(crate) fn unlock(file: String) -> Result<()> {
+    unsafe {
+        let fd = libc::open((file.clone() + "\0").as_ptr() as _, libc::O_RDONLY);
+
+        get_err(libc::flock(fd, libc::LOCK_UN), Error::Unlock)?;
+
+        get_err(libc::remove((file + "\0").as_ptr() as _), Error::DeleteLock)?;
     }
     Ok(())
 }

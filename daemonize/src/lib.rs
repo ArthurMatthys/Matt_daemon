@@ -4,17 +4,16 @@ mod fork;
 mod logger;
 mod signal;
 
-use std::path::PathBuf;
-
 use error::{get_err, Error, Result};
 use fork::{execute_fork, ForkResult};
 use libc::exit;
 
 // use libc::pid_t;
-use std::fs::File;
 
-use file_handler::{redirect_stream, Stdio};
-use logger::LogInfo;
+use file_handler::{lock, redirect_stream, unlock};
+pub use logger::{LogInfo, TintinReporter};
+
+use crate::file_handler::close_fds;
 
 struct Mask {
     inner: libc::mode_t,
@@ -33,95 +32,79 @@ fn get_info(name: &str) -> Result<String> {
         let sid = get_err(libc::getsid(pid), Error::GetPid)?;
         let pgid = get_err(libc::getpgid(pid), Error::GetPid)?;
         Ok(format!(
-            "{name:10} || pid : {pid} || sid : {sid} || pgid : {pgid}"
+            "{name} || pid : {pid} || sid : {sid} || pgid : {pgid}"
         ))
     }
 }
 
-pub struct Daemon {
-    logfile: PathBuf,
-    pid: Option<PathBuf>,
-    stdin: Stdio,
-    stdout: Stdio,
-    stderr: Stdio,
+pub struct Daemon<'a> {
+    lock_file: String,
+    logger: &'a TintinReporter,
     umask: Mask,
-    workdir: PathBuf,
+    func: fn() -> Result<()>,
 }
 
-impl Daemon {
-    pub fn new() -> Daemon {
+impl<'a> Daemon<'a> {
+    pub fn new(logger: &TintinReporter) -> Daemon {
         Daemon {
-            logfile: PathBuf::from("/tmp/daemon.log"),
-            pid: None,
-            stdin: Stdio::dev_null(),
-            stdout: Stdio::dev_null(),
-            stderr: Stdio::dev_null(),
+            logger,
+            lock_file: "/var/lock/matt_daemon.lock".to_string(),
             umask: 0.into(),
-            workdir: PathBuf::from("/"),
+            func: || {
+                std::thread::sleep(std::time::Duration::from_secs(10));
+                Ok(())
+            },
         }
     }
-    pub fn stdin(mut self, file: File) -> Self {
-        self.stdin = file.into();
-        self
-    }
-    pub fn stdout(mut self, file: File) -> Self {
-        self.stdout = file.into();
-        self
-    }
-    pub fn stderr(mut self, file: File) -> Self {
-        self.stderr = file.into();
-        self
-    }
+
     pub fn umask(&mut self, mask: u32) {
         self.umask = mask.into()
     }
-    pub fn workdir(&mut self, dir: PathBuf) {
-        self.workdir = dir
-    }
+
     pub fn start(self) -> Result<()> {
-        logger::log(get_info("parent")?, LogInfo::Info)?;
         unsafe {
-            // reset_sig_handlers()?;
-            // reset_sig_mask()?;
-
+            self.logger.log(get_info("parent")?, LogInfo::Info)?;
             match execute_fork()? {
-                ForkResult::Child => Ok(self.daemonize()?),
-                ForkResult::Parent(_) => exit(0),
+                ForkResult::Child => (),
+                ForkResult::Parent(_) => exit(libc::EXIT_SUCCESS),
             }
-        }
-    }
 
-    pub fn daemonize(self) -> Result<()> {
-        unsafe {
-            // eprintln!("closing fd :");
-            // close_fds()?;
             get_err(libc::setsid(), Error::SetSid)?;
 
             match execute_fork()? {
                 ForkResult::Child => (),
-                ForkResult::Parent(_) => exit(0),
+                ForkResult::Parent(_) => exit(libc::EXIT_SUCCESS),
             }
+            self.logger.log(get_info("daemon")?, LogInfo::Info)?;
 
-            logger::log(get_info("daemon")?, LogInfo::Info)?;
+            self.logger.log("Creating lock file", LogInfo::Info)?;
+            lock(self.lock_file.clone())?;
+
+            self.logger
+                .log("Changing file mode creation", LogInfo::Info)?;
             libc::umask(self.umask.inner);
 
-            eprintln!("Yop");
-
+            self.logger
+                .log("Changing working directory", LogInfo::Info)?;
             get_err(libc::chdir(b"/\0" as *const u8 as _), Error::ChangeDir)?;
 
-            redirect_stream(self.stdin, self.stdout, self.stderr)?;
-            eprintln!("Bonjour");
+            self.logger.log("Closing all open files", LogInfo::Info)?;
+            close_fds()?;
+
+            self.logger
+                .log("Redirecting standard streams to /dev/null", LogInfo::Info)?;
+            redirect_stream()?;
+            (self.func)()?;
+
+            self.logger.log("deleting lock file", LogInfo::Info)?;
+            unlock(self.lock_file)?;
         }
-
-        // eprintln!("gogogogo");
-        // std::thread::sleep(std::time::Duration::from_secs(10));
-
         Ok(())
     }
 }
 
-impl Default for Daemon {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl<'a> Default for Daemon<'a> {
+//     fn default() -> Self {
+//         Self::new(TintinReporter::default().to_owned())
+//     }
+// }

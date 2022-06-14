@@ -1,13 +1,14 @@
 use daemonize::*;
 
 fn main() {
-    let d = Daemon::new()
-        .stdout(std::fs::File::create("/tmp/test.log").unwrap())
-        .start();
+    let reporter = TintinReporter::default();
+    let d = Daemon::new(&reporter).start();
 
     match d {
         Ok(_) => (),
-        Err(e) => eprintln!("error creating daemon : {e}"),
+        Err(e) => {
+            reporter.log(format!("error creating daemon : {e}"), LogInfo::Error);
+        }
     }
 
     println!("Hello, world!");

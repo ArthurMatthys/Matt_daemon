@@ -1,9 +1,9 @@
-use std::{fmt::Display, fs, io::Write};
+use std::{fmt::Display, fs, io::Write, path::PathBuf};
 
 use crate::error::{Error, Result};
 use chrono::offset::Local;
 
-pub(crate) enum LogInfo {
+pub enum LogInfo {
     Debug,
     Error,
     Info,
@@ -19,19 +19,38 @@ impl Display for LogInfo {
         }
     }
 }
-pub(crate) fn log<S>(msg: S, info: LogInfo) -> Result<()>
-where
-    S: Display,
-{
-    let mut f = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(true)
-        .open(std::path::Path::new("/tmp/matt_daemon.log"))
-        .map_err(Error::LogOpen)?;
 
-    let now = Local::now().format("%d / %m / %Y - %H : %M : %S");
-    f.write(format!("[{now:}] - {info:5} : {msg}\n").as_bytes())
-        .map_err(Error::Log)?;
-    Ok(())
+pub struct TintinReporter {
+    logfile: PathBuf,
+}
+
+impl Default for TintinReporter {
+    fn default() -> Self {
+        Self {
+            logfile: PathBuf::from("/var/log/matt_daemon/matt_daemon.log"),
+        }
+    }
+}
+
+impl TintinReporter {
+    pub fn new(logfile: PathBuf) -> Self {
+        Self { logfile }
+    }
+    pub fn log<S>(&self, msg: S, info: LogInfo) -> Result<()>
+    where
+        S: Display,
+    {
+        fs::create_dir_all("/var/log/matt_daemon").map_err(Error::CreateDir)?;
+        let mut f = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(&self.logfile)
+            .map_err(Error::LogOpen)?;
+
+        let now = Local::now().format("%d / %m / %Y - %H : %M : %S");
+        f.write(format!("[{now:}] - {info:5} : {msg}\n").as_bytes())
+            .map_err(Error::Log)?;
+        Ok(())
+    }
 }
