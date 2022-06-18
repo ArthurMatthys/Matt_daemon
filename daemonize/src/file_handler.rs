@@ -1,36 +1,4 @@
-use std::{
-    fs::{self, File},
-    os::unix::prelude::AsRawFd,
-    path::PathBuf,
-};
-
 use crate::error::{get_err, Error, Result};
-
-enum StdioImpl {
-    DevNull,
-    // Keep,
-    Redirect(File),
-}
-
-pub struct Stdio {
-    inner: StdioImpl,
-}
-
-impl From<File> for Stdio {
-    fn from(f: File) -> Self {
-        Self {
-            inner: StdioImpl::Redirect(f),
-        }
-    }
-}
-
-impl Stdio {
-    pub(crate) fn dev_null() -> Stdio {
-        Self {
-            inner: StdioImpl::DevNull,
-        }
-    }
-}
 
 pub(crate) fn redirect_stream() -> Result<()> {
     unsafe {
@@ -105,9 +73,10 @@ pub(crate) unsafe fn close_fds() -> Result<()> {
 
 pub(crate) fn lock(file: String) -> Result<()> {
     unsafe {
-        let fd = libc::open((file + "\0").as_ptr() as _, libc::O_RDONLY | libc::O_CREAT);
-
-        eprintln!("fd : {fd}");
+        let fd = libc::open(
+            (file + "\0").as_ptr() as _,
+            libc::O_RDONLY | libc::O_CREAT | libc::O_EXCL,
+        );
 
         get_err(libc::flock(fd, libc::LOCK_EX), Error::AlreadyLock).map_err(|e| match e {
             Error::AlreadyLock(libc::EWOULDBLOCK) => {

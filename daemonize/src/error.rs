@@ -8,6 +8,7 @@ pub enum Error {
     ChangeDir(Errno),
     CloseFd(Errno),
     CreateDir(std::io::Error),
+    ClientErrorBinding(std::io::Error),
     DeleteLock(Errno),
     InvalidFd { fd: i32, expected: i32 },
     IssueLockFile(Errno),
@@ -19,6 +20,8 @@ pub enum Error {
     GetSid(Errno),
     MaxFdTooBig,
     Open(Errno),
+    Quit,
+    Read(Errno),
     RedirectStream(Errno),
     Rlmit(Errno),
     SetSid(Errno),
@@ -35,6 +38,7 @@ impl Display for Error {
             Error::AlreadyLock(e) => write!(f, "Lock file already created : {e}")?,
             Error::ChangeDir(e) => write!(f, "Error changing directory : {e}")?,
             Error::CloseFd(e) => write!(f, "Error closing fd : {e}")?,
+            Error::ClientErrorBinding(e) => write!(f, "Cannot bind to address: {e}")?,
             Error::CreateDir(e) => write!(f, "Error creating dir : {e}")?,
             Error::DeleteLock(e) => write!(f, "Error deleting lock file: {e}")?,
             Error::InvalidFd { fd, expected } => {
@@ -49,6 +53,7 @@ impl Display for Error {
             Error::GetSid(e) => write!(f, "Can't retrieve pid : {e}")?,
             Error::MaxFdTooBig => write!(f, "Max fd retrieved with sysconf is too big")?,
             Error::Open(e) => write!(f, "Error opening file : {e}")?,
+            Error::Read(e) => write!(f, "Error reading file : {e}")?,
             Error::RedirectStream(e) => write!(f, "Error redirecting stream : {e}")?,
             Error::Rlmit(e) => write!(f, "Error getting rlimit : {e}")?,
             Error::SetSid(e) => write!(f, "Error setting sid : {e}")?,
@@ -57,6 +62,7 @@ impl Display for Error {
             Error::SignalSetting(e) => write!(f, "Error setting signla handler : {e}")?,
             Error::Sysconf(e) => write!(f, "Error getting value of sysconf : {e}")?,
             Error::Unlock(e) => write!(f, "Error unlocking lock file : {e}")?,
+            Error::Quit => write!(f, "Quitting the daemon")?,
         };
         Ok(())
     }
@@ -71,6 +77,11 @@ impl IsErr for i32 {
     }
 }
 impl IsErr for i64 {
+    fn is_err(&self) -> bool {
+        *self == -1
+    }
+}
+impl IsErr for isize {
     fn is_err(&self) -> bool {
         *self == -1
     }
@@ -93,7 +104,7 @@ where
     }
 }
 
-fn get_errno() -> Errno {
+pub fn get_errno() -> Errno {
     io::Error::last_os_error()
         .raw_os_error()
         .expect("Errno expected")
