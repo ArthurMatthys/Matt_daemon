@@ -38,6 +38,18 @@ pub struct Daemon {
     umask: Mask,
     func: fn(TintinReporter) -> Result<()>,
 }
+impl Drop for Daemon {
+    fn drop(&mut self) {
+        self.logger
+            .log("deleting lock file\n", LogInfo::Info, self.debug)
+            .expect("Could not log the deletion of the lock file");
+
+        unlock(self.lock_file.clone()).expect("Unable to delete lock file");
+        self.logger
+            .log("Daemon quitted\n", LogInfo::Info, self.debug)
+            .expect("Could not log the exit of the daemon");
+    }
+}
 
 impl Daemon {
     pub fn new(logger: TintinReporter, f: fn(TintinReporter) -> Result<()>, debug: bool) -> Daemon {
@@ -89,6 +101,14 @@ impl Daemon {
                 .log("Closing all open files\n", LogInfo::Debug, self.debug)?;
             close_fds()?;
 
+            // self.logger
+            //     .log("Reseting signal handlers\n", LogInfo::Debug, self.debug)?;
+            // reset_sig_handlers()?;
+
+            //             self.logger
+            //                 .log("Reseting sig mask\n", LogInfo::Debug, self.debug)?;
+            //             reset_sig_mask()?;
+
             self.logger
                 .log("Daemon started properly\n", LogInfo::Info, self.debug)?;
 
@@ -100,9 +120,7 @@ impl Daemon {
             redirect_stream()?;
             (self.func)(self.logger.clone())?;
 
-            self.logger
-                .log("deleting lock file\n", LogInfo::Debug, self.debug)?;
-            unlock(self.lock_file)?;
+            self.logger.send_mail()?;
         }
         Ok(())
     }

@@ -63,7 +63,6 @@ fn get_max_fd() -> Result<i32> {
 pub(crate) unsafe fn close_fds() -> Result<()> {
     let fds = 3..get_max_fd()?;
     get_rlimit()?;
-    eprintln!("fd to close : {fds:#?}");
 
     fds.for_each(|fd| {
         libc::close(fd);
@@ -78,12 +77,9 @@ pub(crate) fn lock(file: String) -> Result<()> {
             libc::O_RDONLY | libc::O_CREAT | libc::O_EXCL,
         );
 
-        get_err(libc::flock(fd, libc::LOCK_EX), Error::AlreadyLock).map_err(|e| match e {
-            Error::AlreadyLock(libc::EWOULDBLOCK) => {
-                eprintln!("Je devrais arriver ici");
-                e
-            }
-            Error::AlreadyLock(v) => Error::IssueLockFile(v),
+        get_err(libc::flock(fd, libc::LOCK_EX), Error::IssueLockFile).map_err(|e| match e {
+            Error::IssueLockFile(libc::EBADF) => Error::FileAlreadyLocked(libc::EWOULDBLOCK),
+            Error::IssueLockFile(_) => e,
             _ => unreachable!(),
         })?;
     }

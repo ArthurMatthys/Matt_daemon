@@ -2,6 +2,11 @@ use std::{fmt::Display, fs, io::Write, path::PathBuf};
 
 use crate::error::{Error, Result};
 use chrono::offset::Local;
+use lettre::{
+    message::{header::ContentType, Attachment},
+    transport::smtp::authentication::Credentials,
+    Message, SmtpTransport, Transport,
+};
 
 // const LOGFILE: PathBuf = PathBuf::from("/var/log/matt_daemon/matt_daemon.log");
 
@@ -29,29 +34,94 @@ impl LogInfo {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct MailConfig {
+    username: String,
+    password: String,
+    relay: String,
+    dst: String,
+}
+
 #[derive(Clone)]
 pub struct TintinReporter {
     pub logfile: PathBuf,
+    pub mail: Option<MailConfig>,
 }
 
 impl Default for TintinReporter {
     fn default() -> Self {
         Self {
             logfile: PathBuf::from("/var/log/matt_daemon/matt_daemon.log"),
+            mail: None,
         }
     }
 }
 
 impl TintinReporter {
-    pub fn logfile(mut self, logfile: PathBuf) -> Self {
-        self.logfile = logfile;
+    pub fn smtp(&mut self, username: String, password: String, relay: String, dst: String) {
+        self.mail = Some(MailConfig {
+            username,
+            password,
+            relay,
+            dst,
+        })
+    }
+
+    pub fn logfile(mut self, logfile: String) -> Self {
+        self.logfile = PathBuf::from(logfile);
         self
+    }
+
+    pub fn send_mail(&self) -> Result<()> {
+        if self.mail.is_none() {
+            return Ok(());
+        }
+        let mail_config = match &self.mail {
+            None => return Ok(()),
+            Some(config) => config,
+        };
+
+        let smtp_credentials =
+            Credentials::new(mail_config.username.clone(), mail_config.password.clone());
+        let client = SmtpTransport::relay(&mail_config.relay)
+            .map_err(Error::MailSmtpTransport)?
+            .credentials(smtp_credentials)
+            .build();
+
+        let filebody = fs::read(self.logfile.clone()).map_err(Error::ReadFile)?;
+        let attachment = Attachment::new(
+            self.logfile
+                .to_str()
+                .ok_or(Error::ConvertToUTF8)?
+                .to_string(),
+        )
+        .body(filebody, ContentType::TEXT_PLAIN);
+
+        let dst = &mail_config.dst;
+        let mail = Message::builder()
+            .from(
+                "Matt Daemon <matt@daemon.amatthys.gurival.student.42lyon.fr>"
+                    .parse()
+                    .expect("Cannot convert from email"),
+            )
+            .to(dst.parse().expect("Cannot convert from email"))
+            .subject("Recap Matt Daemon")
+            .singlepart(attachment)
+            .map_err(Error::MailBuilder)?;
+
+        self.log(
+            format!("Sending a recap mail to {dst}"),
+            LogInfo::Info,
+            false,
+        )?;
+        client.send(&mail).map_err(Error::MailSend)?;
+
+        Ok(())
     }
     pub fn log<S>(&self, msg: S, info: LogInfo, debug: bool) -> Result<()>
     where
         S: Display,
     {
-        eprintln!("top");
         if debug && info.is_debug() {
             return Ok(());
         }
