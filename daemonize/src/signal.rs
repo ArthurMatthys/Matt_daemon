@@ -13,26 +13,39 @@ use crate::{
 const NSIG: libc::c_int = 32;
 
 pub fn handle_sig(value: i32) {
-    fs::create_dir_all("/var/log/matt_daemon")
-        .map_err(Error::CreateDir)
-        .expect("Cannot create dir to log signal input");
-    let mut f = fs::OpenOptions::new()
+    if let Err(e) = fs::create_dir_all("/var/log/matt_daemon").map_err(Error::CreateDir) {
+        eprintln!("Cannot create dir to log signal input : {e}");
+        return;
+    }
+    let mut f = match fs::OpenOptions::new()
         .create(true)
         .write(true)
         .append(true)
         .open("/var/log/matt_daemon/matt_daemon.log")
         .map_err(Error::LogOpen)
-        .expect("Cannot open the log file to log signal input");
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Cannot open the log file to log signal input : {e}");
+            return;
+        }
+    };
 
     let now = Local::now().format("%d / %m / %Y - %H : %M : %S");
     let info = LogInfo::Warn;
     let msg = format!("Received signal {value}. Exiting the daemon\n");
-    f.write(format!("[{now:}] - {info:5} : {msg}").as_bytes())
+    if let Err(e) = f
+        .write(format!("[{now:}] - {info:5} : {msg}").as_bytes())
         .map_err(Error::Log)
-        .expect("Could not log the signal input");
+    {
+        eprintln!("Could not log the signal input : {e}");
+        return;
+    }
 
-    unlock("/var/lock/matt_daemon.lock".to_string())
-        .expect("The lock file should be set to `/var/lock/matt_daemon.lock`");
+    if let Err(e) = unlock("/var/lock/matt_daemon.lock".to_string()) {
+        eprintln!("The lock file should be set to `/var/lock/matt_daemon.lock` : {e}");
+        return;
+    }
 
     process::exit(0);
 }

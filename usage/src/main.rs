@@ -28,9 +28,9 @@ fn main() -> Result<()> {
     match Daemon::new(reporter.clone(), server, false).start() {
         Ok(_) => Ok(()),
         Err(e) => {
-            reporter
-                .log(format!("Error : {e}\n"), LogInfo::Error, false)
-                .expect("Failed to log error in daemon");
+            if let Err(e) = reporter.log(format!("Error : {e}\n"), LogInfo::Error, false) {
+                eprintln!("Failed to log error in daemon : {e}");
+            }
             Err(e)
         }
     }

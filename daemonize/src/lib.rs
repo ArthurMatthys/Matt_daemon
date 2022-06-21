@@ -41,14 +41,25 @@ pub struct Daemon {
 }
 impl Drop for Daemon {
     fn drop(&mut self) {
-        self.logger
+        if self
+            .logger
             .log("deleting lock file\n", LogInfo::Info, self.debug)
-            .expect("Could not log the deletion of the lock file");
+            .is_err()
+        {
+            eprintln!("Exiting daemon : Could not log the deletion of the lock file");
+        }
 
-        unlock(self.lock_file.clone()).expect("Unable to delete lock file");
-        self.logger
+        if unlock(self.lock_file.clone()).is_err() {
+            eprintln!("Unable to delete lock file");
+        }
+
+        if self
+            .logger
             .log("Daemon quitted\n", LogInfo::Info, self.debug)
-            .expect("Could not log the exit of the daemon");
+            .is_err()
+        {
+            eprintln!("Could not log the exit of the daemon");
+        }
     }
 }
 
@@ -106,12 +117,12 @@ impl Daemon {
                 .log("Seting signal handlers\n", LogInfo::Debug, self.debug)?;
             set_sig_handlers()?;
 
+            redirect_stream()?;
             self.logger.log(
                 "Redirecting standard streams to /dev/null\n",
                 LogInfo::Debug,
                 self.debug,
             )?;
-            redirect_stream()?;
 
             self.logger
                 .log("Daemon started properly\n", LogInfo::Info, self.debug)?;

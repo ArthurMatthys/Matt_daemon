@@ -102,9 +102,9 @@ impl TintinReporter {
             .from(
                 "Matt Daemon <matt@daemon.amatthys.gurival.student.42lyon.fr>"
                     .parse()
-                    .expect("Cannot convert from email"),
+                    .map_err(|_| Error::ParseError)?,
             )
-            .to(dst.parse().expect("Cannot convert from email"))
+            .to(dst.parse().map_err(|_| Error::ParseError)?)
             .subject("Recap Matt Daemon")
             .singlepart(attachment)
             .map_err(Error::MailBuilder)?;
