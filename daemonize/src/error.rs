@@ -6,6 +6,7 @@ use std::{fmt::Display, io};
 pub enum Error {
     ChangeDir(Errno),
     CloseFd(Errno),
+    ConnectionShutdown(std::io::Error),
     CreateDir(std::io::Error),
     ClientErrorBinding(std::io::Error),
     ConvertToUTF8,
@@ -39,15 +40,16 @@ pub enum Error {
     SignalSetting(Errno),
     Sysconf(Errno),
     Unlock(Errno),
+    WrongFd,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::IssueLockFile(e) => write!(f, "Issue with lock file : {e}")?,
             Error::ChangeDir(e) => write!(f, "Error changing directory : {e}")?,
             Error::CloseFd(e) => write!(f, "Error closing fd : {e}")?,
-            Error::ClientErrorBinding(e) => write!(f, "Cannot bind to address: {e}")?,
+            Error::ClientErrorBinding(e) => write!(f, "Cannot bind to address : {e}")?,
+            Error::ConnectionShutdown(e) => write!(f, "Cannot shutdown the TCP connection : {e}")?,
             Error::CreateDir(e) => write!(f, "Error creating dir : {e}")?,
             Error::ConvertToUTF8 => write!(f, "Cannot convert the logfile name to UTF8")?,
             Error::DeleteLock(e) => write!(f, "Error deleting lock file: {e}")?,
@@ -65,6 +67,7 @@ impl Display for Error {
             Error::GetPid(e) => write!(f, "Can't retrieve pid : {e}")?,
             Error::GetPgid(e) => write!(f, "Can't retrieve pid : {e}")?,
             Error::GetSid(e) => write!(f, "Can't retrieve pid : {e}")?,
+            Error::IssueLockFile(e) => write!(f, "Issue with lock file : {e}")?,
             Error::Log(e) => write!(f, "Error while logging : {e}")?,
             Error::LogOpen(e) => write!(f, "Error trying to open logfile : {e}")?,
             Error::MaxFdTooBig => write!(f, "Max fd retrieved with sysconf is too big")?,
@@ -83,6 +86,7 @@ impl Display for Error {
             Error::Sysconf(e) => write!(f, "Error getting value of sysconf : {e}")?,
             Error::Unlock(e) => write!(f, "Error unlocking lock file : {e}")?,
             Error::Quit => write!(f, "Quitting the daemon")?,
+            Error::WrongFd => write!(f, "No stream corresponding to this fd")?,
         };
         Ok(())
     }

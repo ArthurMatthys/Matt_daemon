@@ -10,6 +10,7 @@ use libc::exit;
 
 pub use error::{get_err, get_errno, Error, Result};
 pub use logger::{LogInfo, TintinReporter};
+use signal::set_sig_handlers;
 
 use crate::file_handler::close_fds;
 
@@ -101,16 +102,9 @@ impl Daemon {
                 .log("Closing all open files\n", LogInfo::Debug, self.debug)?;
             close_fds()?;
 
-            // self.logger
-            //     .log("Reseting signal handlers\n", LogInfo::Debug, self.debug)?;
-            // reset_sig_handlers()?;
-
-            //             self.logger
-            //                 .log("Reseting sig mask\n", LogInfo::Debug, self.debug)?;
-            //             reset_sig_mask()?;
-
             self.logger
-                .log("Daemon started properly\n", LogInfo::Info, self.debug)?;
+                .log("Seting signal handlers\n", LogInfo::Debug, self.debug)?;
+            set_sig_handlers()?;
 
             self.logger.log(
                 "Redirecting standard streams to /dev/null\n",
@@ -118,6 +112,10 @@ impl Daemon {
                 self.debug,
             )?;
             redirect_stream()?;
+
+            self.logger
+                .log("Daemon started properly\n", LogInfo::Info, self.debug)?;
+
             (self.func)(self.logger.clone())?;
 
             self.logger.send_mail()?;
