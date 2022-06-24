@@ -24,8 +24,16 @@ fn main() -> Result<()> {
         }
         None => (),
     }
+    let daemon = match Daemon::new(reporter.clone(), server, false) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{e}");
+            reporter.log(format!("{e}"), LogInfo::Error, false)?;
+            return Err(e);
+        }
+    };
 
-    match Daemon::new(reporter.clone(), server, false).start() {
+    match daemon.start() {
         Ok(_) => Ok(()),
         Err(e) => {
             if let Err(e) = reporter.log(format!("Error : {e}\n"), LogInfo::Error, false) {

@@ -7,6 +7,7 @@ mod signal;
 use file_handler::{lock, redirect_stream, unlock};
 use fork::{execute_fork, ForkResult};
 use libc::exit;
+use std::path;
 
 pub use error::{get_err, get_errno, Error, Result};
 pub use logger::{LogInfo, TintinReporter};
@@ -39,6 +40,7 @@ pub struct Daemon {
     umask: Mask,
     func: fn(TintinReporter) -> Result<()>,
 }
+
 impl Drop for Daemon {
     fn drop(&mut self) {
         if self
@@ -64,13 +66,22 @@ impl Drop for Daemon {
 }
 
 impl Daemon {
-    pub fn new(logger: TintinReporter, f: fn(TintinReporter) -> Result<()>, debug: bool) -> Daemon {
-        Daemon {
-            debug,
-            lock_file: "/var/lock/matt_daemon.lock".to_string(),
-            logger,
-            umask: 0.into(),
-            func: f,
+    pub fn new(
+        logger: TintinReporter,
+        f: fn(TintinReporter) -> Result<()>,
+        debug: bool,
+    ) -> Result<Daemon> {
+        let file = "/var/lock/matt_daemon.lock";
+        if path::Path::new(file).exists() {
+            Err(Error::FileAlreadyLocked(0))
+        } else {
+            Ok(Daemon {
+                debug,
+                lock_file: file.to_string(),
+                logger,
+                umask: 0.into(),
+                func: f,
+            })
         }
     }
 
@@ -132,18 +143,5 @@ impl Daemon {
             self.logger.send_mail()?;
         }
         Ok(())
-    }
-}
-
-impl Default for Daemon {
-    fn default() -> Self {
-        Self::new(
-            TintinReporter::default(),
-            |_| {
-                std::thread::sleep(std::time::Duration::from_secs(10));
-                Ok(())
-            },
-            true,
-        )
     }
 }
