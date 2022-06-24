@@ -122,7 +122,7 @@ impl TintinReporter {
     where
         S: Display,
     {
-        if debug && info.is_debug() {
+        if !debug && info.is_debug() {
             return Ok(());
         }
         fs::create_dir_all("/var/log/matt_daemon").map_err(Error::CreateDir)?;
