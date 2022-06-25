@@ -76,6 +76,7 @@ impl TintinReporter {
         if self.mail.is_none() {
             return Ok(());
         }
+
         let mail_config = match &self.mail {
             None => return Ok(()),
             Some(config) => config,
@@ -104,13 +105,13 @@ impl TintinReporter {
                     .parse()
                     .map_err(|_| Error::ParseError)?,
             )
-            .to(dst.parse().map_err(|_| Error::ParseError)?)
+            .to(dst.parse().map_err(|_| Error::ParseDstError)?)
             .subject("Recap Matt Daemon")
             .singlepart(attachment)
             .map_err(Error::MailBuilder)?;
 
         self.log(
-            format!("Sending a recap mail to {dst}"),
+            format!("Sending a recap mail to {dst}\n"),
             LogInfo::Info,
             false,
         )?;

@@ -1,13 +1,11 @@
+use crate::connections::Connections;
 use daemonize::{get_err, Error, LogInfo, Result, TintinReporter};
 use std::collections::HashMap;
 use std::env;
-use std::fmt::{format, Display};
 use std::io::Write;
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::os::unix::prelude::{AsRawFd, FromRawFd};
-use std::process::{Command, Stdio};
-
-use crate::connections::Connections;
+use std::os::unix::prelude::AsRawFd;
+use std::process::Command;
 
 use strum::FromRepr;
 
