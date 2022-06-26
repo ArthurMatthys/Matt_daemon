@@ -27,6 +27,6 @@ pub fn get_smtp(reporter: &mut TintinReporter, dst: String) -> Result<()> {
             return Err(Error::DotEnvRelay(e));
         }
     };
-    reporter.smtp(username, password, relay, dst);
+    reporter.smtp(username, password, relay, dst)?;
     Ok(())
 }

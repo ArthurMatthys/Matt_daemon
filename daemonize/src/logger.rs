@@ -3,7 +3,7 @@ use std::{fmt::Display, fs, io::Write, path::PathBuf};
 use crate::error::{Error, Result};
 use chrono::offset::Local;
 use lettre::{
-    message::{header::ContentType, Attachment},
+    message::{header::ContentType, Attachment, MessageBuilder},
     transport::smtp::authentication::Credentials,
     Message, SmtpTransport, Transport,
 };
@@ -39,7 +39,8 @@ pub struct MailConfig {
     username: String,
     password: String,
     relay: String,
-    dst: String,
+    dst: MessageBuilder,
+    mail_addr: String,
 }
 
 #[derive(Clone)]
@@ -58,13 +59,29 @@ impl Default for TintinReporter {
 }
 
 impl TintinReporter {
-    pub fn smtp(&mut self, username: String, password: String, relay: String, dst: String) {
+    pub fn smtp(
+        &mut self,
+        username: String,
+        password: String,
+        relay: String,
+        dst: String,
+    ) -> Result<()> {
+        let mail = Message::builder()
+            .from(
+                "Matt Daemon <matt@daemon.amatthys.gurival.student.42lyon.fr>"
+                    .parse()
+                    .map_err(|_| Error::ParseError)?,
+            )
+            .to(dst.parse().map_err(|_| Error::ParseDstError)?);
         self.mail = Some(MailConfig {
             username,
             password,
             relay,
-            dst,
-        })
+            dst: mail,
+            mail_addr: dst,
+        });
+
+        Ok(())
     }
 
     pub fn logfile(mut self, logfile: String) -> Self {
@@ -98,24 +115,20 @@ impl TintinReporter {
         )
         .body(filebody, ContentType::TEXT_PLAIN);
 
-        let dst = &mail_config.dst;
-        let mail = Message::builder()
-            .from(
-                "Matt Daemon <matt@daemon.amatthys.gurival.student.42lyon.fr>"
-                    .parse()
-                    .map_err(|_| Error::ParseError)?,
-            )
-            .to(dst.parse().map_err(|_| Error::ParseDstError)?)
+        let mail = &mail_config
+            .dst
+            .clone()
             .subject("Recap Matt Daemon")
             .singlepart(attachment)
             .map_err(Error::MailBuilder)?;
+        let mail_addr = &mail_config.mail_addr;
 
         self.log(
-            format!("Sending a recap mail to {dst}\n"),
+            format!("Sending a recap mail to {mail_addr}\n"),
             LogInfo::Info,
             false,
         )?;
-        client.send(&mail).map_err(Error::MailSend)?;
+        client.send(mail).map_err(Error::MailSend)?;
 
         Ok(())
     }

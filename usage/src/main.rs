@@ -28,7 +28,7 @@ fn main() -> Result<()> {
         Ok(d) => d,
         Err(e) => {
             eprintln!("{e}");
-            reporter.log(format!("{e}"), LogInfo::Error, false)?;
+            reporter.log(format!("{e}\n"), LogInfo::Error, false)?;
             return Err(e);
         }
     };
