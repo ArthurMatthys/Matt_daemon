@@ -95,7 +95,6 @@ impl Daemon {
             self.logger
                 .log("Entering daemon mode\n", LogInfo::Info, self.debug)?;
 
-            self.logger.log(get_pid()?, LogInfo::Info, self.debug)?;
             match execute_fork()? {
                 ForkResult::Child => (),
                 ForkResult::Parent(_) => exit(libc::EXIT_SUCCESS),
@@ -107,6 +106,8 @@ impl Daemon {
                 ForkResult::Child => (),
                 ForkResult::Parent(_) => exit(libc::EXIT_SUCCESS),
             }
+            self.logger.log(get_pid()?, LogInfo::Info, self.debug)?;
+
 
             self.logger
                 .log("Creating lock file\n", LogInfo::Debug, self.debug)?;
