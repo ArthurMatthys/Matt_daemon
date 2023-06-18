@@ -1,3 +1,4 @@
+#include "TintinReporter.class.hpp"
 #include "main.hpp"
 #include <fcntl.h>
 #include <iostream>
@@ -8,6 +9,7 @@
 
 using namespace std;
 const char *LOCK_FILE = "/var/lock/matt_daemon.lock";
+const char *LOG_FILE = "/var/log/matt_daemon/matt_daemon.log";
 
 void fork_exit_parent() {
     pid_t c_pid = fork();
@@ -30,11 +32,13 @@ void set_sid() {
 
 void change_working_dir() {
     if (chdir("/") == -1) {
-        exit(EXIT_FAILURE);
+        unlock_file_and_exit(EXIT_FAILURE);
     };
 }
 
 int main() {
+
+    TintinReporter report = TintinReporter();
 
     fork_exit_parent();
     set_sid();
@@ -44,7 +48,7 @@ int main() {
     change_working_dir();
     close_fds();
     set_sig_handlers();
-    redirect_stream();
+    /* redirect_stream(); */
 
     while (true) {
         sleep(1);
@@ -53,6 +57,7 @@ int main() {
 
     // launch server
     // send mail (?)
+    unlock_file();
 
     return 0;
 }

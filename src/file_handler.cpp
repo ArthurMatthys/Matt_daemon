@@ -10,7 +10,7 @@
 long get_max_fd() {
     long ret = sysconf(_SC_OPEN_MAX);
     if (ret == -1) {
-        exit(EXIT_FAILURE);
+        unlock_file_and_exit(EXIT_FAILURE);
     }
     return ret;
 }
@@ -25,7 +25,6 @@ void close_fds() {
 void create_lock_file(const char *filename) {
     int fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0666);
     if (fd < 0) {
-        std::cout << "yo8" << std::endl;
         exit(EXIT_FAILURE);
     }
     if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) < 0) {
@@ -34,8 +33,8 @@ void create_lock_file(const char *filename) {
     }
 }
 
-void unlock_file(const char *filename) {
-    int fd = open(filename, O_RDONLY, 0666);
+void unlock_file() {
+    int fd = open(LOCK_FILE, O_RDONLY, 0666);
     if (fd < 0) {
         exit(EXIT_FAILURE);
     }
@@ -43,23 +42,28 @@ void unlock_file(const char *filename) {
         close(fd);
         exit(EXIT_FAILURE);
     }
-    if (remove(filename) == -1) {
+    if (remove(LOCK_FILE) == -1) {
         exit(EXIT_FAILURE);
     }
 }
 
+void unlock_file_and_exit(int status) {
+    unlock_file();
+    exit(status);
+}
+
 void redirect_stream() {
     if (close(STDIN_FILENO) == -1) {
-        exit(EXIT_FAILURE);
+        unlock_file_and_exit(EXIT_FAILURE);
     }
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd != 0) {
-        exit(EXIT_FAILURE);
+        unlock_file_and_exit(EXIT_FAILURE);
     }
     if (dup2(STDIN_FILENO, STDOUT_FILENO) == -1) {
-        exit(EXIT_FAILURE);
+        unlock_file_and_exit(EXIT_FAILURE);
     }
     if (dup2(STDIN_FILENO, STDERR_FILENO) == -1) {
-        exit(EXIT_FAILURE);
+        unlock_file_and_exit(EXIT_FAILURE);
     }
 }

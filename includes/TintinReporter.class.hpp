@@ -5,6 +5,7 @@
 #include <string>
 
 enum LogInfo { Debug, Info, Warn, Error };
+std::string get_loginfo(LogInfo info);
 
 class TintinReporter {
   public:
@@ -21,5 +22,7 @@ class TintinReporter {
     MailConfig mail;
     bool mail_active;
 };
+
+void report_log(LogInfo info, std::string msg);
 
 #endif
