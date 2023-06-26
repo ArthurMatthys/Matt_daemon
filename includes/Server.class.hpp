@@ -1,21 +1,23 @@
 #ifndef CLIENT_CLASS_H
 #define CLIENT_CLASS_H
 
+#include "../includes/TintinReporter.class.hpp"
 #include <string>
 
 enum ShellMode { None, Shell, Bash };
 
 inline std::ostream &operator<<(std::ostream &os, ShellMode &mode);
 
-class Client {
+class Server {
   public:
-    Client(void);
-    Client(Client const &reporter);
-    Client &operator=(Client const &rhs);
-    virtual ~Client(void);
+    Server(void);
+    Server(Server const &reporter);
+    Server &operator=(Server const &rhs);
+    virtual ~Server(void);
 
     void set_mode(ShellMode mode);
     void *get_addr();
+    void run(TintinReporter report);
 
   private:
     void *stream;

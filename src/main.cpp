@@ -1,6 +1,8 @@
-#include "TintinReporter.class.hpp"
+#include "../includes/TintinReporter.class.hpp"
+#include "Server.class.hpp"
 #include "main.hpp"
 #include <fcntl.h>
+#include <format>
 #include <iostream>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -16,11 +18,8 @@ void fork_exit_parent() {
     if (c_pid == -1) {
         exit(EXIT_FAILURE);
     } else if (c_pid > 0) {
-        //  wait(nullptr);
-        cout << "printed from parent process " << getpid() << endl;
         exit(EXIT_SUCCESS);
     } else {
-        cout << "printed from child process " << getpid() << endl;
     }
 }
 
@@ -40,24 +39,26 @@ int main() {
 
     TintinReporter report = TintinReporter();
 
+    report.log(LogInfo::Info, "Entering Daemon mode");
+
     fork_exit_parent();
     set_sid();
     fork_exit_parent();
-    create_lock_file(LOCK_FILE);
+    report.log(LogInfo::Info, std::format("Starting with pid {}", getpid()));
+    create_lock_file(LOCK_FILE, report);
     umask(0);
     change_working_dir();
     close_fds();
     set_sig_handlers();
-    /* redirect_stream(); */
+    redirect_stream();
+    report.log(LogInfo::Info, "Daemon started properly");
+    Server server = Server();
 
-    while (true) {
-        sleep(1);
-        cout << "yolo" << endl;
-    }
+    server.run(report);
 
     // launch server
     // send mail (?)
-    unlock_file();
+    /* unlock_file(); */
 
     return 0;
 }

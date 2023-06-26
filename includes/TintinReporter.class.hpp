@@ -15,12 +15,10 @@ class TintinReporter {
     virtual ~TintinReporter(void);
 
     void sendRecap();
-    void log(std::string msg, LogInfo info);
+    void log(LogInfo info, std::string msg);
 
   private:
-    std::string logfile;
     MailConfig mail;
-    bool mail_active;
 };
 
 void report_log(LogInfo info, std::string msg);

@@ -1,7 +1,9 @@
+#include "../includes/TintinReporter.class.hpp"
 #include "main.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
+#include <format>
 #include <iostream>
 #include <ostream>
 #include <sys/file.h>
@@ -22,9 +24,14 @@ void close_fds() {
     }
 }
 
-void create_lock_file(const char *filename) {
+void create_lock_file(const char *filename, TintinReporter report) {
     int fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0666);
     if (fd < 0) {
+        if (errno == 17)
+            report.log(
+                LogInfo::Error,
+                std::format("The lock file is locked by another process : {}",
+                            errno));
         exit(EXIT_FAILURE);
     }
     if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) < 0) {

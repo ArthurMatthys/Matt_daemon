@@ -15,7 +15,7 @@ CFLAGS += -Wall -Wextra -Werror -pedantic -g
 OBJ_DIR = ./obj/
 SRC_DIR = ./src/
 SRC_ = \
-				Client.cpp \
+				Server.cpp \
 				file_handler.cpp \
 				MailConfig.cpp \
 				main.cpp \
@@ -34,7 +34,7 @@ SRC = $(addprefix $(SRC_COMMON_DIR), $(SRC_COMMON_))
 INC_DIR = ./includes/
 
 INCLUDES_ = \
-				Client.class.hpp \
+				Server.class.hpp \
 				MailConfig.class.hpp \
 				TintinReporter.class.hpp \
 				common.hpp

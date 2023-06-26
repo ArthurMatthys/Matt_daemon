@@ -5,21 +5,24 @@
 #include <fstream>
 #include <iostream>
 
-TintinReporter::TintinReporter()
-    : logfile(""), mail(MailConfig()), mail_active(false) {}
+TintinReporter::TintinReporter() : mail(MailConfig()) {}
 
 TintinReporter::TintinReporter(TintinReporter const &reporter) {
     *this = reporter;
 }
 
 TintinReporter &TintinReporter::operator=(TintinReporter const &rhs) {
-    this->logfile = rhs.logfile;
     this->mail = rhs.mail;
-    this->mail_active = rhs.mail_active;
     return (*this);
 }
 
-TintinReporter::~TintinReporter() { std::cout << "Riperino" << std::endl; }
+TintinReporter::~TintinReporter() {}
+
+void TintinReporter::sendRecap() { this->mail.sendRecap(); }
+
+void TintinReporter::log(LogInfo info, std::string msg) {
+    report_log(info, msg);
+}
 
 std::string get_loginfo(LogInfo info) {
     std::string ret;
