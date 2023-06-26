@@ -34,7 +34,7 @@ std::string get_loginfo(LogInfo info) {
         ret = "\x1B[33mINFO\x1B[0m";
         break;
     case LogInfo::Warn:
-        ret = "\x1B[35mWarn\x1B[0m";
+        ret = "\x1B[35mWARN\x1B[0m";
         break;
     case LogInfo::Error:
         ret = "\x1B[31mERROR\x1B[0m";
