@@ -6,7 +6,7 @@ vpath %.c src
 NAME = Matt_daemon
 
 CC = g++ -std=c++20
-CFLAGS += -Wall -Wextra -Werror -pedantic -g
+CFLAGS += -Wall -Wextra -Werror -pedantic -g 
 
 # **************************************************************************** #
 #                                  SOURCES COMMON                              #
@@ -35,12 +35,12 @@ INC_DIR = ./includes/
 
 INCLUDES_ = \
 				Server.class.hpp \
-				MailConfig.class.hpp \
 				TintinReporter.class.hpp \
 				common.hpp
 
 INCLUDES = $(addprefix $(INC_DIR), $(INCLUDES_))
-INCLUDE = -I $(INC_DIR) 
+INCLUDE = -I $(INC_DIR) -lcurl
+# INCLUDE = -I $(INC_DIR) -lPocoNet -lPocoFoundation
 
 
 # **************************************************************************** #

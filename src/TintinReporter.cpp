@@ -5,20 +5,20 @@
 #include <fstream>
 #include <iostream>
 
-TintinReporter::TintinReporter() : mail(MailConfig()) {}
+TintinReporter::TintinReporter() {}
 
 TintinReporter::TintinReporter(TintinReporter const &reporter) {
     *this = reporter;
 }
 
 TintinReporter &TintinReporter::operator=(TintinReporter const &rhs) {
-    this->mail = rhs.mail;
+    (void)rhs;
     return (*this);
 }
 
 TintinReporter::~TintinReporter() {}
 
-void TintinReporter::sendRecap() { this->mail.sendRecap(); }
+void TintinReporter::sendRecap() {}
 
 void TintinReporter::log(LogInfo info, std::string msg) {
     report_log(info, msg);

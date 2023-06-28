@@ -45,6 +45,7 @@ int main() {
     set_sid();
     fork_exit_parent();
     report.log(LogInfo::Info, std::format("Starting with pid {}", getpid()));
+
     create_lock_file(LOCK_FILE, report);
     umask(0);
     change_working_dir();
@@ -57,7 +58,7 @@ int main() {
     server.run(report);
 
     // launch server
-    // send mail (?)
+    report.sendRecap();
     /* unlock_file(); */
 
     return 0;

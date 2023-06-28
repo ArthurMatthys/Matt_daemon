@@ -13,5 +13,6 @@ long get_max_fd();
 void create_lock_file(const char *filename, TintinReporter report);
 void redirect_stream();
 void set_sig_handlers();
+void sendMailRecap();
 
 #endif

@@ -1,7 +1,6 @@
 #ifndef TINTINREPORTER_CLASS_H
 #define TINTINREPORTER_CLASS_H
 
-#include "MailConfig.class.hpp"
 #include <string>
 
 enum LogInfo { Debug, Info, Warn, Error };
@@ -16,9 +15,6 @@ class TintinReporter {
 
     void sendRecap();
     void log(LogInfo info, std::string msg);
-
-  private:
-    MailConfig mail;
 };
 
 void report_log(LogInfo info, std::string msg);

@@ -9,6 +9,8 @@ void handle_sig(int i) {
     report_log(LogInfo::Info,
                std::format("Received signal {}. Exiting the daemon", i));
 
+    sendMailRecap();
+
     unlock_file_and_exit(EXIT_SUCCESS);
 }
 
