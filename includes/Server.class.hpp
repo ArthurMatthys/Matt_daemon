@@ -1,7 +1,6 @@
 #ifndef CLIENT_CLASS_H
 #define CLIENT_CLASS_H
 
-#include "../includes/TintinReporter.class.hpp"
 #include <string>
 
 enum ShellMode { None, Shell, Bash };
@@ -17,7 +16,7 @@ class Server {
 
     void set_mode(ShellMode mode);
     void *get_addr();
-    void run(TintinReporter report);
+    void run();
 
   private:
     void *stream;

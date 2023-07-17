@@ -1,11 +1,12 @@
 #ifndef MAIN_HPP
 #define MAIN_HPP
+#include "../includes/TintinReporter.class.hpp"
 
 /* #define NSIG 32; */
 extern const char *LOCK_FILE;
 extern const char *LOG_FILE;
+extern TintinReporter g_report;
 
-#include "../includes/TintinReporter.class.hpp"
 void close_fds();
 void unlock_file();
 void unlock_file_and_exit(int status);

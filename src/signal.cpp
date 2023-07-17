@@ -4,12 +4,14 @@
 #include <cstdlib>
 #include <format>
 
+extern TintinReporter g_report;
+
 void handle_sig(int i) {
 
     report_log(LogInfo::Info,
                std::format("Received signal {}. Exiting the daemon", i));
 
-    sendMailRecap();
+    g_report.sendRecap();
 
     unlock_file_and_exit(EXIT_SUCCESS);
 }
