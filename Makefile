@@ -1,7 +1,4 @@
-vpath %.c src
-
 .PHONY: all clean fclean re
-
 
 NAME = Matt_daemon
 
@@ -14,8 +11,7 @@ CFLAGS += -Wall -Wextra -Werror -pedantic -g
 
 OBJ_DIR = ./obj/
 SRC_DIR = ./src/
-SRC_ = \
-				Server.cpp \
+SRC_ = Server.cpp \
 				file_handler.cpp \
 				MailConfig.cpp \
 				main.cpp \
@@ -33,14 +29,12 @@ SRC = $(addprefix $(SRC_COMMON_DIR), $(SRC_COMMON_))
 
 INC_DIR = ./includes/
 
-INCLUDES_ = \
-				Server.class.hpp \
+INCLUDES_ = Server.class.hpp \
 				TintinReporter.class.hpp \
 				common.hpp
 
 INCLUDES = $(addprefix $(INC_DIR), $(INCLUDES_))
 INCLUDE = -I $(INC_DIR) -lcurl
-# INCLUDE = -I $(INC_DIR) -lPocoNet -lPocoFoundation
 
 
 # **************************************************************************** #
@@ -50,6 +44,7 @@ INCLUDE = -I $(INC_DIR) -lcurl
 all: $(NAME)
 
 $(NAME): $(OBJ_DIR) $(O_FILES) 
+	$(info $(O_FILES))
 	@printf "\r\033[K[$(NAME)] \033[1;32mLinking...\033[0m"
 	$(CC) $(CFLAGS) -o $(NAME) $(O_FILES) $(INCLUDE)
 	@printf "\r\033[K[$(NAME)] \033[1;32mDone!\033[0m\n"
@@ -58,8 +53,8 @@ $(NAME): $(OBJ_DIR) $(O_FILES)
 $(OBJ_DIR):
 	mkdir -p $@
 
-# $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp $(INCLUDES)
-$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp
+# $(OBJ_DIR)%.o: $(SRC_DIR)%.cpp $(INCLUDES) // Doesnt work ????
+$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp ./includes/Server.class.hpp ./includes/TintinReporter.class.hpp ./includes/main.hpp
 	$(CC) $(CFLAGS) -o $@ -c $< $(INCLUDE)
 
 clean:
