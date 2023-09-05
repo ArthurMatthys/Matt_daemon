@@ -34,7 +34,7 @@ INCLUDES_ = Server.class.hpp \
 				common.hpp
 
 INCLUDES = $(addprefix $(INC_DIR), $(INCLUDES_))
-INCLUDE = -I $(INC_DIR) -lcurl
+INCLUDE = -I $(INC_DIR)
 
 
 # **************************************************************************** #
@@ -46,7 +46,7 @@ all: $(NAME)
 $(NAME): $(OBJ_DIR) $(O_FILES) 
 	$(info $(O_FILES))
 	@printf "\r\033[K[$(NAME)] \033[1;32mLinking...\033[0m"
-	$(CC) $(CFLAGS) -o $(NAME) $(O_FILES) $(INCLUDE)
+	$(CC) $(CFLAGS) -o $(NAME) $(O_FILES) $(INCLUDE) -lfmt -lcurl
 	@printf "\r\033[K[$(NAME)] \033[1;32mDone!\033[0m\n"
 
 
