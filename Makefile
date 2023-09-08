@@ -1,6 +1,6 @@
 .PHONY: all clean fclean re
 
-NAME = Matt_daemon
+NAME = matt_daemon
 
 CC = g++ -std=c++20
 CFLAGS += -Wall -Wextra -Werror -pedantic -g 
@@ -13,7 +13,6 @@ OBJ_DIR = ./obj/
 SRC_DIR = ./src/
 SRC_ = Server.cpp \
 				file_handler.cpp \
-				MailConfig.cpp \
 				main.cpp \
 				signal.cpp \
 				TintinReporter.cpp \

@@ -29,9 +29,6 @@ void	fork_exit_parent(void)
 	{
 		exit(EXIT_SUCCESS);
 	}
-	else
-	{
-	}
 }
 
 void	set_sid(void)
@@ -70,17 +67,17 @@ int	main(int argc, char **argv)
 	{
 		exit(EXIT_FAILURE);
 	}
-	std::cout << "hello ";
-	std::cout << std::getenv("SMTPUSERNAME") << std::endl;
-	std::cout << std::getenv("SMTPPASSWORD") << std::endl;
 	g_report = TintinReporter(send_mail, mail_to);
+	// set_sig_null();
+	create_lock_file(LOCK_FILE, g_report);
 	g_report.log(LogInfo::Info, "Entering Daemon mode");
 	fork_exit_parent();
+	// set_sig_null();
 	set_sid();
 	fork_exit_parent();
+	// set_sig_null();
 	g_report.log(LogInfo::Info, fmt::v8::format("Starting with pid {}",
 			getpid()));
-	create_lock_file(LOCK_FILE, g_report);
 	umask(0);
 	change_working_dir();
 	close_fds();
@@ -89,8 +86,5 @@ int	main(int argc, char **argv)
 	g_report.log(LogInfo::Info, "Daemon started properly");
 	server = Server();
 	server.run();
-	// launch server
-	g_report.sendRecap();
-	/* unlock_file(); */
 	return (0);
 }

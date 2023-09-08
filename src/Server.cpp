@@ -157,17 +157,13 @@ void Server::run()
 					buffer[msg_size] = '\0';
 					if (!strcmp("quit\n", buffer))
 					{
-						send(client_fd, "exiting client\r\n",
-							strlen("exiting client\r\n"), 0);
+						send(client_fd, "Exiting the daemon\r\n",
+							strlen("Exiting the daemon\r\n"), 0);
 						g_report.log(LogInfo::Info,
-							fmt::v8::format("Host disconnected : {}:{}",
-								inet_ntoa(address.sin_addr),
-								ntohs(address.sin_port)));
-						connected_clients -= 1;
-						if (close(client_fd) == -1)
-							unlock_file_and_exit(EXIT_FAILURE);
-						client_socket[i] = 0;
-						continue ;
+							fmt::v8::format("Exiting the daemon"));
+						close(client_fd);
+						g_report.sendRecap();
+						exit(EXIT_SUCCESS);
 					}
 					else
 					{

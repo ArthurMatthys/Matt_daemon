@@ -1,0 +1,6 @@
+{
+  "C_Cpp.default.includePath": ["${workspaceFolder}/include/**"],
+  "C_Cpp.intelliSenseEngine": "Tag Parser",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "keyhr.42-c-format",
+}

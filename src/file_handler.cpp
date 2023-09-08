@@ -36,13 +36,14 @@ void	create_lock_file(const char *filename, TintinReporter report)
 {
 	int	fd;
 
-	fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0666);
+	fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0600);
 	if (fd < 0)
 	{
 		if (errno == 17)
 			report.log(LogInfo::Error,
 				fmt::v8::format("The lock file is locked by another process : {}",
 					errno));
+		std::cerr << "There is already a daemon running" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) < 0)
@@ -56,7 +57,7 @@ void	unlock_file(void)
 {
 	int	fd;
 
-	fd = open(LOCK_FILE, O_RDONLY, 0666);
+	fd = open(LOCK_FILE, O_RDONLY, 0600);
 	if (fd < 0)
 	{
 		exit(EXIT_FAILURE);

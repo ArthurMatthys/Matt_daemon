@@ -12,8 +12,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define FROM_MAIL "<matthys.arthur16@gmail.com>"
-#define TO_MAIL "<matthys.arthur16@gmail.com>"
+#define FROM_MAIL "<amatthysgurival-@42lyon.fr>"
+#define TO_MAIL "<correcteur42@42lyon.fr>"
 #define SUBJECT "Recap Matt Daemon"
 #define SIZE_BUFF 16384
 
@@ -21,16 +21,16 @@ TintinReporter::TintinReporter(bool send_mail,
 	char *mail_to) : send_mail(send_mail), mail_to(mail_to)
 {
 	this->username = std::getenv("SMTPUSERNAME");
-	this->username = std::getenv("SMTPPASSWORD");
+	this->password = std::getenv("SMTPPASSWORD");
 	if (send_mail && !this->username)
 	{
 		std::cerr << "No username for smtp, please export a `SMTPUSERNAME`" << std::endl;
-			exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);
 	}
 	if (send_mail && !this->password)
 	{
 		std::cerr << "No username for smtp, please export a `SMTPPASSWORD`" << std::endl;
-			exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -111,26 +111,30 @@ void TintinReporter::sendRecap()
 	struct curl_slist		*recipients;
 	struct upload_status	upload_ctx;
 
-	res = CURLE_OK;
-	recipients = NULL;
-	upload_ctx = {0};
-	curl = curl_easy_init();
-	if (curl)
+	unlock_file();
+	if (this->send_mail)
 	{
-		curl_easy_setopt(curl, CURLOPT_USERNAME, "USERNAME");
-		curl_easy_setopt(curl, CURLOPT_PASSWORD, "PASSWORD");
-		curl_easy_setopt(curl, CURLOPT_URL, "smtps://smtp.gmail.com");
-		recipients = curl_slist_append(recipients, TO_MAIL);
-		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
-		curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);
-		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
-		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-		res = curl_easy_perform(curl);
-		if (res != CURLE_OK)
-			unlock_file_and_exit(EXIT_FAILURE);
-		curl_slist_free_all(recipients);
-		curl_easy_cleanup(curl);
+		res = CURLE_OK;
+		recipients = NULL;
+		upload_ctx = {0};
+		curl = curl_easy_init();
+		if (curl)
+		{			
+			curl_easy_setopt(curl, CURLOPT_USERNAME, this->username);
+			curl_easy_setopt(curl, CURLOPT_PASSWORD, this->password);
+			curl_easy_setopt(curl, CURLOPT_URL, "smtps://smtp.gmail.com");
+			recipients = curl_slist_append(recipients, this->mail_to);
+			curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+			curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);
+			curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
+			curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+			curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+			res = curl_easy_perform(curl);
+			if (res != CURLE_OK)
+				unlock_file_and_exit(EXIT_FAILURE);
+			curl_slist_free_all(recipients);
+			curl_easy_cleanup(curl);
+		}
 	}
 }
 

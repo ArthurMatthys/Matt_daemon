@@ -15,5 +15,6 @@ void create_lock_file(const char *filename, TintinReporter report);
 void redirect_stream();
 void set_sig_handlers();
 void sendMailRecap();
+// void set_sig_null();
 
 #endif
