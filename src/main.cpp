@@ -68,20 +68,17 @@ int	main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	g_report = TintinReporter(send_mail, mail_to);
-	// set_sig_null();
+	set_sig_handlers();
 	create_lock_file(LOCK_FILE, g_report);
 	g_report.log(LogInfo::Info, "Entering Daemon mode");
 	fork_exit_parent();
-	// set_sig_null();
 	set_sid();
 	fork_exit_parent();
-	// set_sig_null();
 	g_report.log(LogInfo::Info, fmt::v8::format("Starting with pid {}",
 			getpid()));
 	umask(0);
 	change_working_dir();
 	close_fds();
-	set_sig_handlers();
 	redirect_stream();
 	g_report.log(LogInfo::Info, "Daemon started properly");
 	server = Server();
