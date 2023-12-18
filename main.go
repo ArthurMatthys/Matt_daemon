@@ -28,7 +28,7 @@ func fetchFromFork(repo *git.Repository, branch string) (*object.Commit, error) 
 
 	fmt.Printf("serverURL: %s\n", serverURL)
 
-	forkURL := serverURL + username + "/" + parts[1]
+	forkURL := fmt.Sprintf("%s/%s/%s", serverURL, username, parts[1])
 
 	cmd := exec.Command("git", "remote", "add", "fork", forkURL)
 	err := cmd.Run()
