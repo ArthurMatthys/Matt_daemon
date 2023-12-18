@@ -26,6 +26,8 @@ func fetchFromFork(repo *git.Repository, branch string) (*object.Commit, error) 
 	// but can be different for GitHub Enterprise
 	serverURL := os.Getenv("GITHUB_SERVER_URL")
 
+	fmt.Printf("serverURL: %s\n", serverURL)
+
 	forkURL := serverURL + username + "/" + parts[1]
 
 	cmd := exec.Command("git", "remote", "add", "fork", forkURL)
